@@ -592,7 +592,7 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📸</div>
                 <div class="upload-text">Click to upload or drag & drop</div>
-                <div class="upload-subtext">PNG, JPG, JPEG • Max 5MB • Instant Analysis</div>
+                <div class="upload-subtext">PNG, JPG, JPEG • Max 5MB • Lightning Fast ⚡</div>
             </div>
             <input type="file" id="imageInput" accept="image/png, image/jpeg, image/jpg">
 
@@ -751,15 +751,19 @@
         function analyzeLSB(canvas, ctx) {
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             let lsbCount = [0, 0, 0];
-            let totalPixels = Math.floor(imgData.length / 4);
+            
+            // OPTIMIZED: Sample every 4th pixel instead of all pixels
+            const sampleStep = 4;
+            let sampledPixels = 0;
 
-            for (let i = 0; i < imgData.length; i += 4) {
+            for (let i = 0; i < imgData.length; i += 16) { // Skip 4 pixels at a time
                 lsbCount[0] += imgData[i] & 1;
                 lsbCount[1] += imgData[i + 1] & 1;
                 lsbCount[2] += imgData[i + 2] & 1;
+                sampledPixels++;
             }
 
-            const lsbRatios = lsbCount.map(count => count / totalPixels);
+            const lsbRatios = lsbCount.map(count => count / sampledPixels);
             let score = 0;
             lsbRatios.forEach(ratio => {
                 const deviation = Math.abs(ratio - 0.5);
@@ -774,7 +778,8 @@
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             const histogram = new Array(256).fill(0);
 
-            for (let i = 0; i < imgData.length; i += 4) {
+            // OPTIMIZED: Sample every 4th pixel
+            for (let i = 0; i < imgData.length; i += 16) {
                 const gray = (imgData[i] + imgData[i + 1] + imgData[i + 2]) / 3;
                 histogram[Math.floor(gray)]++;
             }
@@ -799,7 +804,8 @@
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             const observed = new Array(256).fill(0);
 
-            for (let i = 0; i < imgData.length; i += 4) {
+            // OPTIMIZED: Sample every 4th pixel
+            for (let i = 0; i < imgData.length; i += 16) {
                 const gray = (imgData[i] + imgData[i + 1] + imgData[i + 2]) / 3;
                 observed[Math.floor(gray)]++;
             }
@@ -826,7 +832,8 @@
                 blue: new Array(256).fill(0)
             };
 
-            for (let i = 0; i < imgData.length; i += 4) {
+            // OPTIMIZED: Sample every 4th pixel
+            for (let i = 0; i < imgData.length; i += 16) {
                 channels.red[imgData[i]]++;
                 channels.green[imgData[i + 1]]++;
                 channels.blue[imgData[i + 2]]++;
@@ -870,7 +877,7 @@
             const metrics = [
                 { label: 'LSB Uniformity', value: lsb.score, icon: '🔢' },
                 { label: 'Entropy Analysis', value: entropy.score, icon: '📊' },
-                { label: 'Chi-Square Test', value: chiSquareTest.score, icon: '📈' },
+                { label: 'Chi-Square Test', value: chiSquare.score, icon: '📈' },
                 { label: 'Color Distribution', value: colorDist.score, icon: '🎨' }
             ];
 
