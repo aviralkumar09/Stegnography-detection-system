@@ -1,584 +1,653 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Steganography Detection System</title>
-  <style>
-    /* ──────────────────────────────────────────────
-       RESET & BASE
-    ────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steganography Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      min-height: 100vh;
-      color: #e0e0e0;
-      padding: 24px 16px 48px;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-    /* ──────────────────────────────────────────────
-       HEADER
-    ────────────────────────────────────────────── */
-    header {
-      text-align: center;
-      margin-bottom: 36px;
-    }
-    header h1 {
-      font-size: clamp(1.6rem, 4vw, 2.6rem);
-      font-weight: 700;
-      background: linear-gradient(90deg, #a78bfa, #60a5fa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: 1px;
-    }
-    header p {
-      margin-top: 8px;
-      font-size: 0.95rem;
-      color: #9ca3af;
-    }
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+        }
 
-    /* ──────────────────────────────────────────────
-       CARD
-    ────────────────────────────────────────────── */
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 28px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2em;
+        }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
 
-    /* ──────────────────────────────────────────────
-       UPLOAD ZONE
-    ────────────────────────────────────────────── */
-    #drop-zone {
-      border: 2px dashed rgba(167, 139, 250, 0.5);
-      border-radius: 12px;
-      padding: 48px 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.3s, background 0.3s;
-      position: relative;
-    }
-    #drop-zone:hover,
-    #drop-zone.drag-over {
-      border-color: #a78bfa;
-      background: rgba(167, 139, 250, 0.08);
-    }
-    #drop-zone .upload-icon {
-      font-size: 3rem;
-      display: block;
-      margin-bottom: 12px;
-    }
-    #drop-zone p {
-      color: #9ca3af;
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-    #drop-zone strong { color: #a78bfa; }
-    #file-input { display: none; }
+        .upload-section {
+            margin-bottom: 30px;
+        }
 
-    .btn {
-      display: inline-block;
-      margin-top: 16px;
-      padding: 10px 28px;
-      background: linear-gradient(135deg, #a78bfa, #60a5fa);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-    .btn:hover { opacity: 0.88; }
-    .btn:active { transform: scale(0.97); }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
 
-    /* ──────────────────────────────────────────────
-       PREVIEW + RESULTS LAYOUT
-    ────────────────────────────────────────────── */
-    #analysis-section {
-      display: none;
-    }
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 600px) {
-      .two-col { grid-template-columns: 1fr; }
-    }
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
 
-    /* ──────────────────────────────────────────────
-       IMAGE PREVIEW
-    ────────────────────────────────────────────── */
-    .preview-card { text-align: center; }
-    .preview-card h3 {
-      font-size: 1rem;
-      color: #9ca3af;
-      margin-bottom: 14px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    #preview-img {
-      max-width: 100%;
-      max-height: 260px;
-      border-radius: 10px;
-      border: 2px solid rgba(255,255,255,0.1);
-      object-fit: contain;
-    }
-    .img-meta {
-      margin-top: 10px;
-      font-size: 0.82rem;
-      color: #6b7280;
-    }
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
 
-    /* ──────────────────────────────────────────────
-       VERDICT BANNER
-    ────────────────────────────────────────────── */
-    #verdict-banner {
-      border-radius: 12px;
-      padding: 20px 24px;
-      text-align: center;
-      transition: background 0.5s;
-    }
-    #verdict-banner.clean {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.4);
-    }
-    #verdict-banner.suspicious {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-    }
-    #verdict-icon { font-size: 2.4rem; }
-    #verdict-text {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 6px 0 4px;
-    }
-    .clean  #verdict-text { color: #34d399; }
-    .suspicious #verdict-text { color: #f87171; }
-    #verdict-sub { font-size: 0.88rem; color: #9ca3af; }
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
 
-    /* ──────────────────────────────────────────────
-       CONFIDENCE BAR
-    ────────────────────────────────────────────── */
-    .confidence-wrap {
-      margin-top: 16px;
-    }
-    .confidence-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.82rem;
-      color: #9ca3af;
-      margin-bottom: 6px;
-    }
-    .confidence-track {
-      background: rgba(255,255,255,0.08);
-      border-radius: 99px;
-      height: 10px;
-      overflow: hidden;
-    }
-    .confidence-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.8s ease;
-    }
-    .clean .confidence-fill  { background: linear-gradient(90deg, #10b981, #34d399); }
-    .suspicious .confidence-fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .upload-text {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
 
-    /* ──────────────────────────────────────────────
-       METRICS TABLE
-    ────────────────────────────────────────────── */
-    #metrics-card h3 {
-      font-size: 1rem;
-      color: #9ca3af;
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .metric-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      font-size: 0.9rem;
-    }
-    .metric-row:last-child { border-bottom: none; }
-    .metric-name { color: #d1d5db; }
-    .metric-value { font-weight: 600; }
-    .metric-badge {
-      font-size: 0.75rem;
-      padding: 2px 10px;
-      border-radius: 99px;
-      margin-left: 10px;
-    }
-    .badge-ok   { background: rgba(16,185,129,0.2); color: #34d399; }
-    .badge-warn { background: rgba(239,68,68,0.2);  color: #f87171; }
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9em;
+        }
 
-    /* ──────────────────────────────────────────────
-       PROGRESS SPINNER
-    ────────────────────────────────────────────── */
-    #spinner {
-      display: none;
-      text-align: center;
-      padding: 20px;
-    }
-    .spinner-ring {
-      width: 44px; height: 44px;
-      border: 4px solid rgba(167,139,250,0.2);
-      border-top-color: #a78bfa;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 10px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+        #imageInput {
+            display: none;
+        }
 
-    /* ──────────────────────────────────────────────
-       FOOTER
-    ────────────────────────────────────────────── */
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      font-size: 0.8rem;
-      color: #4b5563;
-    }
-  </style>
+        .preview-section {
+            display: none;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        #preview {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+        }
+
+        .preview-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-header {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: white;
+        }
+
+        .result-header.suspicious {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .result-header.clean {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .metrics {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            color: #333;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .explanation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            color: #856404;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #0c5aa0;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .upload-area {
+                padding: 30px 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>🔍 Steganography Detection System</h1>
+        <p class="subtitle">Upload an image to detect if it contains hidden data</p>
 
-<header>
-  <h1>🔍 Steganography Detection System</h1>
-  <p>Upload an image to detect whether it carries hidden / suspicious data</p>
-</header>
-
-<div class="container">
-
-  <!-- ── UPLOAD CARD ── -->
-  <div class="card">
-    <div id="drop-zone" role="button" aria-label="Upload image" tabindex="0">
-      <span class="upload-icon">📂</span>
-      <p>
-        <strong>Drag &amp; drop</strong> an image here,<br>
-        or click the button below to browse<br>
-        <small>(PNG &amp; JPEG supported)</small>
-      </p>
-      <button class="btn" id="browse-btn">Choose Image</button>
-      <input type="file" id="file-input" accept="image/png,image/jpeg" />
-    </div>
-  </div>
-
-  <!-- ── SPINNER ── -->
-  <div id="spinner">
-    <div class="spinner-ring"></div>
-    <p style="color:#9ca3af;font-size:0.9rem;">Analyzing image…</p>
-  </div>
-
-  <!-- ── RESULTS SECTION ── -->
-  <section id="analysis-section" aria-live="polite">
-
-    <!-- Verdict + confidence -->
-    <div class="card" id="verdict-banner">
-      <div id="verdict-icon">—</div>
-      <div id="verdict-text">—</div>
-      <div id="verdict-sub">Upload an image to see results</div>
-      <div class="confidence-wrap">
-        <div class="confidence-label">
-          <span>Confidence</span>
-          <span id="confidence-pct">—</span>
+        <div class="info-box">
+            ℹ️ This system analyzes images for statistical anomalies that suggest hidden steganographic data.
         </div>
-        <div class="confidence-track">
-          <div class="confidence-fill" id="confidence-fill" style="width:0%"></div>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">Click to upload or drag & drop</div>
+                <div class="upload-subtext">PNG, JPG, JPEG (Max 5MB)</div>
+            </div>
+            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/jpg">
         </div>
-      </div>
+
+        <div class="preview-section" id="previewSection">
+            <div class="preview-label">Image Preview</div>
+            <img id="preview" src="" alt="Preview">
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing image... Please wait</div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-header" id="resultHeader"></div>
+            <div class="metrics" id="metrics"></div>
+            <div class="explanation" id="explanation"></div>
+            <div class="button-group">
+                <button class="btn-reset" onclick="resetAnalysis()">Upload Another Image</button>
+            </div>
+        </div>
     </div>
 
-    <!-- Preview + metrics -->
-    <div class="two-col">
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const imageInput = document.getElementById('imageInput');
+        const previewSection = document.getElementById('previewSection');
+        const preview = document.getElementById('preview');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const resultHeader = document.getElementById('resultHeader');
+        const metrics = document.getElementById('metrics');
+        const explanation = document.getElementById('explanation');
 
-      <!-- Preview -->
-      <div class="card preview-card">
-        <h3>Uploaded Image</h3>
-        <img id="preview-img" src="" alt="Image preview" />
-        <div class="img-meta" id="img-meta"></div>
-      </div>
+        // Upload area click
+        uploadArea.addEventListener('click', () => imageInput.click());
 
-      <!-- Metrics -->
-      <div class="card" id="metrics-card">
-        <h3>Analysis Metrics</h3>
-        <div id="metrics-list"></div>
-      </div>
-
-    </div>
-  </section>
-
-</div><!-- .container -->
-
-<footer>
-  Steganography Detection System &nbsp;|&nbsp; Client-side analysis only — no data is uploaded to any server
-</footer>
-
-<script>
-/* =================================================================
-   STEGANOGRAPHY DETECTION ENGINE
-   Methods implemented:
-     1. LSB Uniformity  — ideal stego data has ~50 % LSB bits
-     2. Chi-square Test — compares expected vs observed frequency pairs
-     3. Shannon Entropy — high entropy can indicate compressed/encrypted payload
-     4. Color Channel Correlation — hidden data disrupts natural channel correlation
-   ================================================================= */
-
-  /* ── 1. LSB Uniformity Analysis ──────────────────────────────── */
-  function lsbAnalysis(data, totalPixels) {
-    let r = 0, g = 0, b = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      r += (data[i]     & 1);
-      g += (data[i + 1] & 1);
-      b += (data[i + 2] & 1);
-    }
-    const ratios = [r / totalPixels, g / totalPixels, b / totalPixels];
-    // Ratio close to 0.5 in all channels → likely LSB-encoded
-    const avgDeviation = ratios.reduce((s, v) => s + Math.abs(v - 0.5), 0) / 3;
-    // avgDeviation ≈ 0 → perfectly uniform (suspicious); larger → natural image
-    const suspicionScore = Math.max(0, 1 - avgDeviation * 8); // 0-1
-    return {
-      label: 'LSB Uniformity',
-      detail: `R:${ratios[0].toFixed(3)}  G:${ratios[1].toFixed(3)}  B:${ratios[2].toFixed(3)}`,
-      score: suspicionScore,
-      suspicious: suspicionScore > 0.6
-    };
-  }
-
-  /* ── 2. Chi-Square Statistical Test ─────────────────────────── */
-  function chiSquareTest(data) {
-    // Build histogram of red-channel values (0–255)
-    const hist = new Array(256).fill(0);
-    for (let i = 0; i < data.length; i += 4) {
-      hist[data[i]]++;
-    }
-    // Compare adjacent pairs (value 2n vs 2n+1) — LSB embedding equalises them
-    let chiSq = 0;
-    let pairs = 0;
-    for (let v = 0; v < 256; v += 2) {
-      const expected = (hist[v] + hist[v + 1]) / 2;
-      if (expected > 0) {
-        const diffV  = hist[v]     - expected;
-        const diffV1 = hist[v + 1] - expected;
-        chiSq += (diffV  * diffV)  / expected;
-        chiSq += (diffV1 * diffV1) / expected;
-        pairs++;
-      }
-    }
-    const normalised = chiSq / (pairs * 2 || 1);
-    // Low chi-square → pairs are balanced → suspicious
-    const suspicionScore = Math.max(0, Math.min(1, 1 - normalised / 5));
-    return {
-      label: 'Chi-Square Test',
-      detail: `χ² = ${chiSq.toFixed(1)} (norm: ${normalised.toFixed(3)})`,
-      score: suspicionScore,
-      suspicious: suspicionScore > 0.55
-    };
-  }
-
-  /* ── 3. Shannon Entropy Analysis ────────────────────────────── */
-  function entropyAnalysis(data, totalPixels) {
-    // Compute entropy of the red channel
-    const hist = new Array(256).fill(0);
-    for (let i = 0; i < data.length; i += 4) {
-      hist[data[i]]++;
-    }
-    let entropy = 0;
-    for (let v = 0; v < 256; v++) {
-      if (hist[v] > 0) {
-        const p = hist[v] / totalPixels;
-        entropy -= p * Math.log2(p);
-      }
-    }
-    // Max possible entropy is 8 bits; stego images tend to have very high entropy
-    const suspicionScore = Math.max(0, Math.min(1, (entropy - 6) / 2));
-    return {
-      label: 'Entropy Analysis',
-      detail: `H = ${entropy.toFixed(4)} bits/pixel`,
-      score: suspicionScore,
-      suspicious: entropy > 7.2
-    };
-  }
-
-  /* ── 4. Color Channel Correlation ───────────────────────────── */
-  function channelCorrelation(data, totalPixels) {
-    // Pearson correlation between R and G channels; high natural correlation expected
-    let sumR = 0, sumG = 0, sumRG = 0, sumR2 = 0, sumG2 = 0;
-    const n = totalPixels;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1];
-      sumR  += r;
-      sumG  += g;
-      sumRG += r * g;
-      sumR2 += r * r;
-      sumG2 += g * g;
-    }
-    const numerator   = n * sumRG - sumR * sumG;
-    const denominator = Math.sqrt((n * sumR2 - sumR * sumR) * (n * sumG2 - sumG * sumG));
-    // When denominator is 0 all pixels have the same R or G value (constant channel).
-    // Treat as uncorrelated (r = 0) so the suspicion score is 1 rather than falsely clean.
-    const correlation = denominator === 0 ? 0 : numerator / denominator;
-    // Low correlation (< 0.8 for natural images) can hint at tampering
-    const suspicionScore = Math.max(0, Math.min(1, 1 - Math.abs(correlation)));
-    return {
-      label: 'Channel Correlation (R↔G)',
-      detail: `Pearson r = ${correlation.toFixed(4)}`,
-      score: suspicionScore,
-      suspicious: Math.abs(correlation) < 0.8
-    };
-  }
-
-  /* ── Combined verdict ────────────────────────────────────────── */
-  function computeVerdict(metrics) {
-    // Weighted average of individual suspicion scores
-    const weights = [0.35, 0.30, 0.20, 0.15]; // LSB, chi², entropy, correlation
-    let weighted = 0;
-    metrics.forEach((m, i) => { weighted += m.score * weights[i]; });
-    const confidencePct = Math.round(weighted * 100);
-    const suspicious = weighted > 0.45;
-    return { suspicious, confidencePct };
-  }
-
-  /* =================================================================
-     UI LOGIC
-   ================================================================= */
-
-  function analyzeFile(file) {
-    if (!file || !file.type.match(/image\/(png|jpeg)/)) {
-      alert('Please upload a PNG or JPEG image.');
-      return;
-    }
-
-    // Show spinner, hide previous results
-    document.getElementById('spinner').style.display = 'block';
-    document.getElementById('analysis-section').style.display = 'none';
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const img = new Image();
-      img.onload = () => {
-        // Draw onto offscreen canvas to access pixel data
-        const canvas = document.createElement('canvas');
-        canvas.width  = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        const totalPixels = img.width * img.height;
-        const imgData     = ctx.getImageData(0, 0, img.width, img.height).data;
-
-        // Run all detection methods
-        const metrics = [
-          lsbAnalysis(imgData, totalPixels),
-          chiSquareTest(imgData),
-          entropyAnalysis(imgData, totalPixels),
-          channelCorrelation(imgData, totalPixels)
-        ];
-
-        const { suspicious, confidencePct } = computeVerdict(metrics);
-
-        // ── Update preview ──
-        document.getElementById('preview-img').src = canvas.toDataURL();
-        document.getElementById('img-meta').textContent =
-          `${img.width} × ${img.height} px  |  ${(file.size / 1024).toFixed(1)} KB  |  ${file.type}`;
-
-        // ── Update verdict banner ──
-        const banner = document.getElementById('verdict-banner');
-        banner.className = suspicious ? 'suspicious' : 'clean';
-        document.getElementById('verdict-icon').textContent = suspicious ? '🚨' : '✅';
-        document.getElementById('verdict-text').textContent  = suspicious ? 'SUSPICIOUS' : 'CLEAN';
-        document.getElementById('verdict-sub').textContent   = suspicious
-          ? 'This image likely contains hidden / encoded data.'
-          : 'No significant signs of steganographic content detected.';
-        document.getElementById('confidence-pct').textContent = confidencePct + '%';
-
-        // Animate confidence bar.
-        // The double rAF ensures the browser first paints width:0% (resetting any
-        // previous bar), then transitions to the new value on the very next frame.
-        const fill = document.getElementById('confidence-fill');
-        fill.style.width = '0%';
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => { fill.style.width = confidencePct + '%'; });
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
         });
 
-        // ── Update metrics list ──
-        // Escape helper: prevents XSS if metric labels/details ever come from
-        // external input in future modifications.
-        const esc = (s) => String(s)
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
 
-        const list = document.getElementById('metrics-list');
-        list.innerHTML = metrics.map(m => `
-          <div class="metric-row">
-            <span class="metric-name">${esc(m.label)}</span>
-            <span class="metric-value">
-              ${esc(m.detail)}
-              <span class="metric-badge ${m.suspicious ? 'badge-warn' : 'badge-ok'}">
-                ${m.suspicious ? 'Flagged' : 'OK'}
-              </span>
-            </span>
-          </div>
-        `).join('');
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                imageInput.files = files;
+                handleImageUpload();
+            }
+        });
 
-        // Show results, hide spinner
-        document.getElementById('spinner').style.display = 'none';
-        document.getElementById('analysis-section').style.display = 'block';
-      };
-      img.src = evt.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
+        // File input change
+        imageInput.addEventListener('change', handleImageUpload);
 
-  /* ── File input ─────────────────────────────────────────────── */
-  document.getElementById('file-input').addEventListener('change', (e) => {
-    if (e.target.files[0]) analyzeFile(e.target.files[0]);
-  });
+        function handleImageUpload() {
+            const file = imageInput.files[0];
+            if (!file) return;
 
-  /* ── Browse button ──────────────────────────────────────────── */
-  document.getElementById('browse-btn').addEventListener('click', () => {
-    document.getElementById('file-input').click();
-  });
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB. Please choose a smaller image.');
+                return;
+            }
 
-  /* ── Drag & drop ─────────────────────────────────────────────── */
-  const dropZone = document.getElementById('drop-zone');
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    preview.src = event.target.result;
+                    previewSection.style.display = 'block';
+                    loading.style.display = 'block';
+                    resultSection.style.display = 'none';
 
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
-  });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) analyzeFile(file);
-  });
+                    // Analyze after a short delay for visual feedback
+                    setTimeout(() => analyzeImage(img), 500);
+                };
+                img.onerror = function() {
+                    alert('Error loading image. Please try another file.');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
-  /* ── Keyboard accessibility for drop-zone ───────────────────── */
-  dropZone.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      document.getElementById('file-input').click();
-    }
-  });
-</script>
+        function analyzeImage(img) {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            // Perform multiple detection methods
+            const lsbAnalysis = analyzeLSB(canvas, ctx);
+            const entropyAnalysis = analyzeEntropy(canvas, ctx);
+            const chiSquareTest = performChiSquareTest(canvas, ctx);
+            const colorDistribution = analyzeColorDistribution(canvas, ctx);
+
+            // Calculate overall suspicion score
+            const suspicionScore = calculateSuspicionScore(
+                lsbAnalysis.score,
+                entropyAnalysis.score,
+                chiSquareTest.score,
+                colorDistribution.score
+            );
+
+            displayResults(
+                suspicionScore,
+                lsbAnalysis,
+                entropyAnalysis,
+                chiSquareTest,
+                colorDistribution
+            );
+
+            loading.style.display = 'none';
+            resultSection.style.display = 'block';
+        }
+
+        function analyzeLSB(canvas, ctx) {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let lsbCount = [0, 0, 0]; // R, G, B
+            let totalPixels = Math.floor(imgData.length / 4);
+
+            for (let i = 0; i < imgData.length; i += 4) {
+                lsbCount[0] += imgData[i] & 1;
+                lsbCount[1] += imgData[i + 1] & 1;
+                lsbCount[2] += imgData[i + 2] & 1;
+            }
+
+            const lsbRatios = lsbCount.map(count => count / totalPixels);
+            const avg = (lsbRatios[0] + lsbRatios[1] + lsbRatios[2]) / 3;
+            
+            // Score based on uniformity (closer to 0.5 = more suspicious)
+            let score = 0;
+            lsbRatios.forEach(ratio => {
+                const deviation = Math.abs(ratio - 0.5);
+                score += (0.5 - deviation) * 100;
+            });
+            score = Math.min(score / 3, 100);
+
+            return {
+                ratios: lsbRatios,
+                average: avg,
+                score: score,
+                label: 'LSB Uniformity'
+            };
+        }
+
+        function analyzeEntropy(canvas, ctx) {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const histogram = new Array(256).fill(0);
+            
+            for (let i = 0; i < imgData.length; i += 4) {
+                const gray = (imgData[i] + imgData[i + 1] + imgData[i + 2]) / 3;
+                histogram[Math.floor(gray)]++;
+            }
+
+            let entropy = 0;
+            const totalPixels = histogram.reduce((a, b) => a + b);
+
+            histogram.forEach(count => {
+                if (count > 0) {
+                    const probability = count / totalPixels;
+                    entropy -= probability * Math.log2(probability);
+                }
+            });
+
+            // Normalize entropy (0-8)
+            const normalizedEntropy = entropy / 8;
+            // High entropy = more suspicious
+            const score = Math.min(normalizedEntropy * 100, 100);
+
+            return {
+                entropy: entropy.toFixed(3),
+                normalized: normalizedEntropy.toFixed(3),
+                score: score,
+                label: 'Entropy Analysis'
+            };
+        }
+
+        function performChiSquareTest(canvas, ctx) {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const observed = new Array(256).fill(0);
+            
+            for (let i = 0; i < imgData.length; i += 4) {
+                const gray = (imgData[i] + imgData[i + 1] + imgData[i + 2]) / 3;
+                observed[Math.floor(gray)]++;
+            }
+
+            const expected = observed.reduce((a, b) => a + b) / 256;
+            let chiSquare = 0;
+
+            observed.forEach(count => {
+                if (expected > 0) {
+                    chiSquare += Math.pow(count - expected, 2) / expected;
+                }
+            });
+
+            // Normalize chi-square value
+            const score = Math.min((chiSquare / 1000) * 100, 100);
+
+            return {
+                chiSquare: chiSquare.toFixed(2),
+                score: score,
+                label: 'Chi-Square Test'
+            };
+        }
+
+        function analyzeColorDistribution(canvas, ctx) {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const channels = {
+                red: new Array(256).fill(0),
+                green: new Array(256).fill(0),
+                blue: new Array(256).fill(0)
+            };
+
+            for (let i = 0; i < imgData.length; i += 4) {
+                channels.red[imgData[i]]++;
+                channels.green[imgData[i + 1]]++;
+                channels.blue[imgData[i + 2]]++;
+            }
+
+            // Calculate variance for each channel
+            const calculateVariance = (arr) => {
+                const mean = arr.reduce((a, b) => a + b) / arr.length;
+                const variance = arr.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / arr.length;
+                return variance;
+            };
+
+            const redVar = calculateVariance(channels.red);
+            const greenVar = calculateVariance(channels.green);
+            const blueVar = calculateVariance(channels.blue);
+
+            const avgVariance = (redVar + greenVar + blueVar) / 3;
+            const score = Math.min((avgVariance / 1000) * 100, 100);
+
+            return {
+                redVariance: redVar.toFixed(2),
+                greenVariance: greenVar.toFixed(2),
+                blueVariance: blueVar.toFixed(2),
+                score: score,
+                label: 'Color Distribution'
+            };
+        }
+
+        function calculateSuspicionScore(lsb, entropy, chiSquare, colorDist) {
+            // Weighted average of all detection methods
+            const weights = {
+                lsb: 0.3,
+                entropy: 0.25,
+                chiSquare: 0.25,
+                colorDist: 0.2
+            };
+
+            const overallScore = 
+                (lsb * weights.lsb) +
+                (entropy * weights.entropy) +
+                (chiSquare * weights.chiSquare) +
+                (colorDist * weights.colorDist);
+
+            return Math.min(Math.max(overallScore, 0), 100);
+        }
+
+        function displayResults(suspicionScore, lsb, entropy, chiSquare, colorDist) {
+            const isSuspicious = suspicionScore > 45;
+
+            // Result header
+            if (isSuspicious) {
+                resultHeader.className = 'result-header suspicious';
+                resultHeader.textContent = '⚠️ SUSPICIOUS - Possible Hidden Data Detected';
+            } else {
+                resultHeader.className = 'result-header clean';
+                resultHeader.textContent = '✅ CLEAN - No Signs of Steganography';
+            }
+
+            // Metrics
+            let metricsHTML = `
+                <div class="metric-item">
+                    <span class="metric-label">Overall Suspicion Score</span>
+                    <span class="metric-value">${suspicionScore.toFixed(1)}%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${suspicionScore}%"></div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3 style="color: #333; margin-bottom: 15px;">Detection Methods</h3>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">LSB Uniformity</span>
+                        <span class="metric-value">${lsb.score.toFixed(1)}%</span>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">Entropy Analysis</span>
+                        <span class="metric-value">${entropy.score.toFixed(1)}%</span>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">Chi-Square Test</span>
+                        <span class="metric-value">${chiSquare.score.toFixed(1)}%</span>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">Color Distribution</span>
+                        <span class="metric-value">${colorDist.score.toFixed(1)}%</span>
+                    </div>
+
+                    <div class="metric-item">
+                        <span class="metric-label">Entropy Value</span>
+                        <span class="metric-value">${entropy.entropy}</span>
+                    </div>
+
+                    <div class="metric-item">
+                        <span class="metric-label">Chi-Square Value</span>
+                        <span class="metric-value">${chiSquare.chiSquare}</span>
+                    </div>
+                </div>
+            `;
+
+            metrics.innerHTML = metricsHTML;
+
+            // Explanation
+            let explanationText = '';
+            if (isSuspicious) {
+                explanationText = `
+                    <strong>⚠️ Warning:</strong> This image shows statistical patterns consistent with steganographic encoding. 
+                    The analysis detected unusual uniformity in LSB patterns or statistical anomalies that suggest hidden data may be embedded. 
+                    This could indicate LSB steganography, spread spectrum techniques, or other embedding methods.
+                `;
+            } else {
+                explanationText = `
+                    <strong>✅ Result:</strong> This image appears to be a normal photograph without obvious signs of steganographic embedding. 
+                    The statistical analysis shows natural color distribution and entropy levels typical of unmodified images.
+                `;
+            }
+
+            explanation.innerHTML = explanationText;
+        }
+
+        function resetAnalysis() {
+            imageInput.value = '';
+            previewSection.style.display = 'none';
+            resultSection.style.display = 'none';
+            loading.style.display = 'none';
+            preview.src = '';
+        }
+    </script>
 </body>
 </html>
