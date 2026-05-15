@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin-top: 10px;
+            max-width: 300px;
+            display: block;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Test Image Generator for Steganography Detection</h1>
+        
+        <div class="section">
+            <h2>✅ Normal/Clean Image</h2>
+            <p>A natural-looking image with random noise (normal distribution)</p>
+            <button onclick="generateNormalImage()">Generate & Download Clean Image</button>
+            <canvas id="normalCanvas" width="400" height="300"></canvas>
+            <div class="info">
+                This image has natural color distribution and entropy. Should show as CLEAN ✅
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚠️ Suspicious Image</h2>
+            <p>Image with embedded hidden data using LSB steganography</p>
+            <button onclick="generateSuspiciousImage()">Generate & Download Suspicious Image</button>
+            <canvas id="suspiciousCanvas" width="400" height="300"></canvas>
+            <div class="info">
+                This image has LSB steganography with hidden data. Should show as SUSPICIOUS ⚠️
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate a normal/clean image
+        function generateNormalImage() {
+            const canvas = document.getElementById('normalCanvas');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Create a gradient background with random noise
+            for (let i = 0; i < data.length; i += 4) {
+                const pixelIndex = i / 4;
+                const x = pixelIndex % canvas.width;
+                const y = Math.floor(pixelIndex / canvas.width);
+
+                // Create gradient
+                const r = Math.floor((x / canvas.width) * 255);
+                const g = Math.floor((y / canvas.height) * 255);
+                const b = 150;
+
+                // Add natural noise
+                const noise = (Math.random() - 0.5) * 30;
+
+                data[i] = Math.max(0, Math.min(255, r + noise));     // R
+                data[i + 1] = Math.max(0, Math.min(255, g + noise)); // G
+                data[i + 2] = Math.max(0, Math.min(255, b + noise)); // B
+                data[i + 3] = 255;                                   // A
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'clean-image.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Generate a suspicious image with LSB steganography
+        function generateSuspiciousImage() {
+            const canvas = document.getElementById('suspiciousCanvas');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Create base image
+            for (let i = 0; i < data.length; i += 4) {
+                const pixelIndex = i / 4;
+                const x = pixelIndex % canvas.width;
+                const y = Math.floor(pixelIndex / canvas.width);
+
+                const r = Math.floor((x / canvas.width) * 255);
+                const g = Math.floor((y / canvas.height) * 255);
+                const b = 150;
+
+                data[i] = r;     // R
+                data[i + 1] = g; // G
+                data[i + 2] = b; // B
+                data[i + 3] = 255; // A
+            }
+
+            // Embed hidden data using LSB steganography
+            // Create a pattern of hidden data (alternating bits)
+            for (let i = 0; i < data.length; i += 4) {
+                const pixelIndex = i / 4;
+                
+                // Embed alternating pattern in LSB
+                if (pixelIndex % 2 === 0) {
+                    // Set LSB to 1 for even pixels
+                    data[i] = (data[i] & 0xFE) | 1;      // Red LSB = 1
+                    data[i + 1] = (data[i + 1] & 0xFE) | 1;  // Green LSB = 1
+                    data[i + 2] = (data[i + 2] & 0xFE) | 1;  // Blue LSB = 1
+                } else {
+                    // Set LSB to 0 for odd pixels
+                    data[i] = data[i] & 0xFE;      // Red LSB = 0
+                    data[i + 1] = data[i + 1] & 0xFE;  // Green LSB = 0
+                    data[i + 2] = data[i + 2] & 0xFE;  // Blue LSB = 0
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'suspicious-image.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Generate previews on page load
+        window.addEventListener('load', () => {
+            generateNormalImage();
+            generateSuspiciousImage();
+        });
+    </script>
+</body>
+</html>
