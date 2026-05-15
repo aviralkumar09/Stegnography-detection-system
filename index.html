@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steganography Detection System</title>
+  <style>
+    /* ──────────────────────────────────────────────
+       RESET & BASE
+    ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      color: #e0e0e0;
+      padding: 24px 16px 48px;
+    }
+
+    /* ──────────────────────────────────────────────
+       HEADER
+    ────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 700;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+    header p {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #9ca3af;
+    }
+
+    /* ──────────────────────────────────────────────
+       CARD
+    ────────────────────────────────────────────── */
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 28px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ──────────────────────────────────────────────
+       UPLOAD ZONE
+    ────────────────────────────────────────────── */
+    #drop-zone {
+      border: 2px dashed rgba(167, 139, 250, 0.5);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.3s, background 0.3s;
+      position: relative;
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: #a78bfa;
+      background: rgba(167, 139, 250, 0.08);
+    }
+    #drop-zone .upload-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+    #drop-zone p {
+      color: #9ca3af;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    #drop-zone strong { color: #a78bfa; }
+    #file-input { display: none; }
+
+    .btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 28px;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+
+    /* ──────────────────────────────────────────────
+       PREVIEW + RESULTS LAYOUT
+    ────────────────────────────────────────────── */
+    #analysis-section {
+      display: none;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 600px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    /* ──────────────────────────────────────────────
+       IMAGE PREVIEW
+    ────────────────────────────────────────────── */
+    .preview-card { text-align: center; }
+    .preview-card h3 {
+      font-size: 1rem;
+      color: #9ca3af;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #preview-img {
+      max-width: 100%;
+      max-height: 260px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.1);
+      object-fit: contain;
+    }
+    .img-meta {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: #6b7280;
+    }
+
+    /* ──────────────────────────────────────────────
+       VERDICT BANNER
+    ────────────────────────────────────────────── */
+    #verdict-banner {
+      border-radius: 12px;
+      padding: 20px 24px;
+      text-align: center;
+      transition: background 0.5s;
+    }
+    #verdict-banner.clean {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    #verdict-banner.suspicious {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    #verdict-icon { font-size: 2.4rem; }
+    #verdict-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 6px 0 4px;
+    }
+    .clean  #verdict-text { color: #34d399; }
+    .suspicious #verdict-text { color: #f87171; }
+    #verdict-sub { font-size: 0.88rem; color: #9ca3af; }
+
+    /* ──────────────────────────────────────────────
+       CONFIDENCE BAR
+    ────────────────────────────────────────────── */
+    .confidence-wrap {
+      margin-top: 16px;
+    }
+    .confidence-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    .confidence-track {
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s ease;
+    }
+    .clean .confidence-fill  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .suspicious .confidence-fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+    /* ──────────────────────────────────────────────
+       METRICS TABLE
+    ────────────────────────────────────────────── */
+    #metrics-card h3 {
+      font-size: 1rem;
+      color: #9ca3af;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.9rem;
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-name { color: #d1d5db; }
+    .metric-value { font-weight: 600; }
+    .metric-badge {
+      font-size: 0.75rem;
+      padding: 2px 10px;
+      border-radius: 99px;
+      margin-left: 10px;
+    }
+    .badge-ok   { background: rgba(16,185,129,0.2); color: #34d399; }
+    .badge-warn { background: rgba(239,68,68,0.2);  color: #f87171; }
+
+    /* ──────────────────────────────────────────────
+       PROGRESS SPINNER
+    ────────────────────────────────────────────── */
+    #spinner {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    .spinner-ring {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(167,139,250,0.2);
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ──────────────────────────────────────────────
+       FOOTER
+    ────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.8rem;
+      color: #4b5563;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 Steganography Detection System</h1>
+  <p>Upload an image to detect whether it carries hidden / suspicious data</p>
+</header>
+
+<div class="container">
+
+  <!-- ── UPLOAD CARD ── -->
+  <div class="card">
+    <div id="drop-zone" role="button" aria-label="Upload image" tabindex="0">
+      <span class="upload-icon">📂</span>
+      <p>
+        <strong>Drag &amp; drop</strong> an image here,<br>
+        or click the button below to browse<br>
+        <small>(PNG &amp; JPEG supported)</small>
+      </p>
+      <button class="btn" onclick="document.getElementById('file-input').click()">
+        Choose Image
+      </button>
+      <input type="file" id="file-input" accept="image/png,image/jpeg" />
+    </div>
+  </div>
+
+  <!-- ── SPINNER ── -->
+  <div id="spinner">
+    <div class="spinner-ring"></div>
+    <p style="color:#9ca3af;font-size:0.9rem;">Analysing image…</p>
+  </div>
+
+  <!-- ── RESULTS SECTION ── -->
+  <section id="analysis-section" aria-live="polite">
+
+    <!-- Verdict + confidence -->
+    <div class="card" id="verdict-banner">
+      <div id="verdict-icon">—</div>
+      <div id="verdict-text">—</div>
+      <div id="verdict-sub">Upload an image to see results</div>
+      <div class="confidence-wrap">
+        <div class="confidence-label">
+          <span>Confidence</span>
+          <span id="confidence-pct">—</span>
+        </div>
+        <div class="confidence-track">
+          <div class="confidence-fill" id="confidence-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview + metrics -->
+    <div class="two-col">
+
+      <!-- Preview -->
+      <div class="card preview-card">
+        <h3>Uploaded Image</h3>
+        <img id="preview-img" src="" alt="Image preview" />
+        <div class="img-meta" id="img-meta"></div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="card" id="metrics-card">
+        <h3>Analysis Metrics</h3>
+        <div id="metrics-list"></div>
+      </div>
+
+    </div>
+  </section>
+
+</div><!-- .container -->
+
+<footer>
+  Steganography Detection System &nbsp;|&nbsp; Client-side analysis only — no data is uploaded to any server
+</footer>
+
+<script>
+/* =================================================================
+   STEGANOGRAPHY DETECTION ENGINE
+   Methods implemented:
+     1. LSB Uniformity  — ideal stego data has ~50 % LSB bits
+     2. Chi-square Test — compares expected vs observed frequency pairs
+     3. Shannon Entropy — high entropy can indicate compressed/encrypted payload
+     4. Color Channel Correlation — hidden data disrupts natural channel correlation
+   ================================================================= */
+
+  /* ── 1. LSB Uniformity Analysis ──────────────────────────────── */
+  function lsbAnalysis(data, totalPixels) {
+    let r = 0, g = 0, b = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      r += (data[i]     & 1);
+      g += (data[i + 1] & 1);
+      b += (data[i + 2] & 1);
+    }
+    const ratios = [r / totalPixels, g / totalPixels, b / totalPixels];
+    // Ratio close to 0.5 in all channels → likely LSB-encoded
+    const avgDeviation = ratios.reduce((s, v) => s + Math.abs(v - 0.5), 0) / 3;
+    // avgDeviation ≈ 0 → perfectly uniform (suspicious); larger → natural image
+    const suspicionScore = Math.max(0, 1 - avgDeviation * 8); // 0-1
+    return {
+      label: 'LSB Uniformity',
+      detail: `R:${ratios[0].toFixed(3)}  G:${ratios[1].toFixed(3)}  B:${ratios[2].toFixed(3)}`,
+      score: suspicionScore,
+      suspicious: suspicionScore > 0.6
+    };
+  }
+
+  /* ── 2. Chi-Square Statistical Test ─────────────────────────── */
+  function chiSquareTest(data) {
+    // Build histogram of red-channel values (0–255)
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < data.length; i += 4) {
+      hist[data[i]]++;
+    }
+    // Compare adjacent pairs (value 2n vs 2n+1) — LSB embedding equalises them
+    let chiSq = 0;
+    let pairs = 0;
+    for (let v = 0; v < 255; v += 2) {
+      const expected = (hist[v] + hist[v + 1]) / 2;
+      if (expected > 0) {
+        chiSq += Math.pow(hist[v] - expected, 2) / expected;
+        chiSq += Math.pow(hist[v + 1] - expected, 2) / expected;
+        pairs++;
+      }
+    }
+    const normalised = chiSq / (pairs * 2 || 1);
+    // Low chi-square → pairs are balanced → suspicious
+    const suspicionScore = Math.max(0, Math.min(1, 1 - normalised / 5));
+    return {
+      label: 'Chi-Square Test',
+      detail: `χ² = ${chiSq.toFixed(1)} (norm: ${normalised.toFixed(3)})`,
+      score: suspicionScore,
+      suspicious: suspicionScore > 0.55
+    };
+  }
+
+  /* ── 3. Shannon Entropy Analysis ────────────────────────────── */
+  function entropyAnalysis(data, totalPixels) {
+    // Compute entropy of the red channel
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < data.length; i += 4) {
+      hist[data[i]]++;
+    }
+    let entropy = 0;
+    for (let v = 0; v < 256; v++) {
+      if (hist[v] > 0) {
+        const p = hist[v] / totalPixels;
+        entropy -= p * Math.log2(p);
+      }
+    }
+    // Max possible entropy is 8 bits; stego images tend to have very high entropy
+    const suspicionScore = Math.max(0, Math.min(1, (entropy - 6) / 2));
+    return {
+      label: 'Entropy Analysis',
+      detail: `H = ${entropy.toFixed(4)} bits/pixel`,
+      score: suspicionScore,
+      suspicious: entropy > 7.2
+    };
+  }
+
+  /* ── 4. Color Channel Correlation ───────────────────────────── */
+  function channelCorrelation(data, totalPixels) {
+    // Pearson correlation between R and G channels; high natural correlation expected
+    let sumR = 0, sumG = 0, sumRG = 0, sumR2 = 0, sumG2 = 0;
+    const n = totalPixels;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1];
+      sumR  += r;
+      sumG  += g;
+      sumRG += r * g;
+      sumR2 += r * r;
+      sumG2 += g * g;
+    }
+    const numerator   = n * sumRG - sumR * sumG;
+    const denominator = Math.sqrt((n * sumR2 - sumR * sumR) * (n * sumG2 - sumG * sumG));
+    const correlation = denominator === 0 ? 1 : numerator / denominator;
+    // Low correlation (< 0.8 for natural images) can hint at tampering
+    const suspicionScore = Math.max(0, Math.min(1, 1 - Math.abs(correlation)));
+    return {
+      label: 'Channel Correlation (R↔G)',
+      detail: `Pearson r = ${correlation.toFixed(4)}`,
+      score: suspicionScore,
+      suspicious: Math.abs(correlation) < 0.8
+    };
+  }
+
+  /* ── Combined verdict ────────────────────────────────────────── */
+  function computeVerdict(metrics) {
+    // Weighted average of individual suspicion scores
+    const weights = [0.35, 0.30, 0.20, 0.15]; // LSB, chi², entropy, correlation
+    let weighted = 0;
+    metrics.forEach((m, i) => { weighted += m.score * weights[i]; });
+    const confidencePct = Math.round(weighted * 100);
+    const suspicious = weighted > 0.45;
+    return { suspicious, confidencePct };
+  }
+
+  /* =================================================================
+     UI LOGIC
+   ================================================================= */
+
+  function analyseFile(file) {
+    if (!file || !file.type.match(/image\/(png|jpeg)/)) {
+      alert('Please upload a PNG or JPEG image.');
+      return;
+    }
+
+    // Show spinner, hide previous results
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('analysis-section').style.display = 'none';
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => {
+        // Draw onto offscreen canvas to access pixel data
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const totalPixels = img.width * img.height;
+        const imgData     = ctx.getImageData(0, 0, img.width, img.height).data;
+
+        // Run all detection methods
+        const metrics = [
+          lsbAnalysis(imgData, totalPixels),
+          chiSquareTest(imgData),
+          entropyAnalysis(imgData, totalPixels),
+          channelCorrelation(imgData, totalPixels)
+        ];
+
+        const { suspicious, confidencePct } = computeVerdict(metrics);
+
+        // ── Update preview ──
+        document.getElementById('preview-img').src = canvas.toDataURL();
+        document.getElementById('img-meta').textContent =
+          `${img.width} × ${img.height} px  |  ${(file.size / 1024).toFixed(1)} KB  |  ${file.type}`;
+
+        // ── Update verdict banner ──
+        const banner = document.getElementById('verdict-banner');
+        banner.className = suspicious ? 'suspicious' : 'clean';
+        document.getElementById('verdict-icon').textContent = suspicious ? '🚨' : '✅';
+        document.getElementById('verdict-text').textContent  = suspicious ? 'SUSPICIOUS' : 'CLEAN';
+        document.getElementById('verdict-sub').textContent   = suspicious
+          ? 'This image likely contains hidden / encoded data.'
+          : 'No significant signs of steganographic content detected.';
+        document.getElementById('confidence-pct').textContent = confidencePct + '%';
+
+        // Animate confidence bar
+        const fill = document.getElementById('confidence-fill');
+        fill.style.width = '0%';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => { fill.style.width = confidencePct + '%'; });
+        });
+
+        // ── Update metrics list ──
+        const list = document.getElementById('metrics-list');
+        list.innerHTML = metrics.map(m => `
+          <div class="metric-row">
+            <span class="metric-name">${m.label}</span>
+            <span class="metric-value">
+              ${m.detail}
+              <span class="metric-badge ${m.suspicious ? 'badge-warn' : 'badge-ok'}">
+                ${m.suspicious ? 'Flagged' : 'OK'}
+              </span>
+            </span>
+          </div>
+        `).join('');
+
+        // Show results, hide spinner
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('analysis-section').style.display = 'block';
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── File input ─────────────────────────────────────────────── */
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    if (e.target.files[0]) analyseFile(e.target.files[0]);
+  });
+
+  /* ── Drag & drop ─────────────────────────────────────────────── */
+  const dropZone = document.getElementById('drop-zone');
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) analyseFile(file);
+  });
+
+  /* ── Keyboard accessibility for drop-zone ───────────────────── */
+  dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      document.getElementById('file-input').click();
+    }
+  });
+</script>
+</body>
+</html>
