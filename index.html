@@ -276,9 +276,7 @@
         or click the button below to browse<br>
         <small>(PNG &amp; JPEG supported)</small>
       </p>
-      <button class="btn" onclick="document.getElementById('file-input').click()">
-        Choose Image
-      </button>
+      <button class="btn" id="browse-btn">Choose Image</button>
       <input type="file" id="file-input" accept="image/png,image/jpeg" />
     </div>
   </div>
@@ -286,7 +284,7 @@
   <!-- ── SPINNER ── -->
   <div id="spinner">
     <div class="spinner-ring"></div>
-    <p style="color:#9ca3af;font-size:0.9rem;">Analysing image…</p>
+    <p style="color:#9ca3af;font-size:0.9rem;">Analyzing image…</p>
   </div>
 
   <!-- ── RESULTS SECTION ── -->
@@ -374,11 +372,13 @@
     // Compare adjacent pairs (value 2n vs 2n+1) — LSB embedding equalises them
     let chiSq = 0;
     let pairs = 0;
-    for (let v = 0; v < 255; v += 2) {
+    for (let v = 0; v < 256; v += 2) {
       const expected = (hist[v] + hist[v + 1]) / 2;
       if (expected > 0) {
-        chiSq += Math.pow(hist[v] - expected, 2) / expected;
-        chiSq += Math.pow(hist[v + 1] - expected, 2) / expected;
+        const diffV  = hist[v]     - expected;
+        const diffV1 = hist[v + 1] - expected;
+        chiSq += (diffV  * diffV)  / expected;
+        chiSq += (diffV1 * diffV1) / expected;
         pairs++;
       }
     }
@@ -432,7 +432,9 @@
     }
     const numerator   = n * sumRG - sumR * sumG;
     const denominator = Math.sqrt((n * sumR2 - sumR * sumR) * (n * sumG2 - sumG * sumG));
-    const correlation = denominator === 0 ? 1 : numerator / denominator;
+    // When denominator is 0 all pixels have the same R or G value (constant channel).
+    // Treat as uncorrelated (r = 0) so the suspicion score is 1 rather than falsely clean.
+    const correlation = denominator === 0 ? 0 : numerator / denominator;
     // Low correlation (< 0.8 for natural images) can hint at tampering
     const suspicionScore = Math.max(0, Math.min(1, 1 - Math.abs(correlation)));
     return {
@@ -458,7 +460,7 @@
      UI LOGIC
    ================================================================= */
 
-  function analyseFile(file) {
+  function analyzeFile(file) {
     if (!file || !file.type.match(/image\/(png|jpeg)/)) {
       alert('Please upload a PNG or JPEG image.');
       return;
@@ -507,7 +509,9 @@
           : 'No significant signs of steganographic content detected.';
         document.getElementById('confidence-pct').textContent = confidencePct + '%';
 
-        // Animate confidence bar
+        // Animate confidence bar.
+        // The double rAF ensures the browser first paints width:0% (resetting any
+        // previous bar), then transitions to the new value on the very next frame.
         const fill = document.getElementById('confidence-fill');
         fill.style.width = '0%';
         requestAnimationFrame(() => {
@@ -515,12 +519,18 @@
         });
 
         // ── Update metrics list ──
+        // Escape helper: prevents XSS if metric labels/details ever come from
+        // external input in future modifications.
+        const esc = (s) => String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         const list = document.getElementById('metrics-list');
         list.innerHTML = metrics.map(m => `
           <div class="metric-row">
-            <span class="metric-name">${m.label}</span>
+            <span class="metric-name">${esc(m.label)}</span>
             <span class="metric-value">
-              ${m.detail}
+              ${esc(m.detail)}
               <span class="metric-badge ${m.suspicious ? 'badge-warn' : 'badge-ok'}">
                 ${m.suspicious ? 'Flagged' : 'OK'}
               </span>
@@ -539,7 +549,12 @@
 
   /* ── File input ─────────────────────────────────────────────── */
   document.getElementById('file-input').addEventListener('change', (e) => {
-    if (e.target.files[0]) analyseFile(e.target.files[0]);
+    if (e.target.files[0]) analyzeFile(e.target.files[0]);
+  });
+
+  /* ── Browse button ──────────────────────────────────────────── */
+  document.getElementById('browse-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
   });
 
   /* ── Drag & drop ─────────────────────────────────────────────── */
@@ -554,7 +569,7 @@
     e.preventDefault();
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file) analyseFile(file);
+    if (file) analyzeFile(file);
   });
 
   /* ── Keyboard accessibility for drop-zone ───────────────────── */
