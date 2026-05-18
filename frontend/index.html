@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steganography Detection Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: #f3f4f6; }
+    .container { max-width: 980px; margin: auto; padding: 20px; }
+    .card { background: #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    input, button { padding: 10px; border-radius: 8px; border: 1px solid #374151; }
+    input { width: calc(50% - 12px); margin-right: 8px; background: #111827; color: #f3f4f6; }
+    button { background: #2563eb; color: #fff; cursor: pointer; margin-right: 8px; }
+    #status, #auth-status { padding: 8px; border-radius: 8px; margin-top: 8px; }
+    .ok { background: #065f46; }
+    .warn { background: #7f1d1d; }
+    pre { white-space: pre-wrap; background: #111827; padding: 10px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Steganography Detection System</h1>
+    <div class="card">
+      <h2>Login / Registration</h2>
+      <input id="username" placeholder="Username" />
+      <input id="password" type="password" placeholder="Password" />
+      <button onclick="register()">Register</button>
+      <button onclick="login()">Login</button>
+      <div id="auth-status"></div>
+    </div>
+    <div class="card">
+      <h2>Dashboard - Upload and Analyze</h2>
+      <input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/bmp,image/gif" style="width:100%;" />
+      <button onclick="uploadAndAnalyze()">Upload & Detect</button>
+      <div id="status"></div>
+    </div>
+    <div class="card">
+      <h2>Results Report</h2>
+      <pre id="report">No report yet.</pre>
+      <button onclick="loadNotifications()">Load Notifications</button>
+      <pre id="notifications">No notifications yet.</pre>
+    </div>
+  </div>
+  <script>
+    let token = localStorage.getItem("token") || "";
+    function authHeaders() { return token ? { Authorization: `Bearer ${token}` } : {}; }
+    function setStatus(id, text, ok=true) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = ok ? "ok" : "warn";
+    }
+    async function register() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      const data = await res.json();
+      if (!res.ok) return setStatus("auth-status", data.detail || "Registration failed", false);
+      token = data.token; localStorage.setItem("token", token); setStatus("auth-status", `Registered as ${data.username}`);
+    }
+    async function login() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      const data = await res.json();
+      if (!res.ok) return setStatus("auth-status", data.detail || "Login failed", false);
+      token = data.token; localStorage.setItem("token", token); setStatus("auth-status", `Logged in as ${data.username}`);
+    }
+    async function uploadAndAnalyze() {
+      const file = document.getElementById("file").files[0];
+      if (!token) return setStatus("status", "Please login first", false);
+      if (!file) return setStatus("status", "Please select a file", false);
+      setStatus("status", "Validating and uploading...");
+      const form = new FormData(); form.append("file", file);
+      const uploadRes = await fetch("/api/files/upload", { method: "POST", headers: authHeaders(), body: form });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) return setStatus("status", uploadData.detail || "Upload failed", false);
+      setStatus("status", "Processing detection pipeline...");
+      const runRes = await fetch(`/api/detection/${uploadData.upload_id}/run`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ notify_on_suspicious: true }) });
+      const runData = await runRes.json();
+      if (!runRes.ok) return setStatus("status", runData.detail || "Detection failed", false);
+      const reportRes = await fetch(`/api/reports/${runData.report_id}`, { headers: authHeaders() });
+      const report = await reportRes.json();
+      document.getElementById("report").textContent = JSON.stringify(report, null, 2);
+      setStatus("status", `Done. Classification: ${report.classification}, Risk: ${report.risk_level}`);
+    }
+    async function loadNotifications() {
+      if (!token) return;
+      const res = await fetch("/api/notifications", { headers: authHeaders() });
+      const data = await res.json();
+      document.getElementById("notifications").textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
