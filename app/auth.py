@@ -21,7 +21,7 @@ def _unb64(data: str) -> bytes:
 
 def hash_password(password: str, salt: str | None = None) -> str:
     local_salt = salt or secrets.token_hex(16)
-    digest = hashlib.sha256(f"{local_salt}:{password}".encode()).hexdigest()
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), local_salt.encode(), 100_000).hex()
     return f"{local_salt}${digest}"
 
 

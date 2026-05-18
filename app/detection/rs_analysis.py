@@ -4,7 +4,13 @@ import numpy as np
 def rs_analysis(frame: np.ndarray) -> dict:
     blocks = frame.mean(axis=2).astype(np.int16).flatten()
     cutoff = (blocks.size // 4) * 4
-    grouped = [blocks] if cutoff == 0 else blocks[:cutoff].reshape(-1, 4)
+    if cutoff == 0:
+        return {
+            "module": "rs_analysis",
+            "score": 0.0,
+            "details": {"regular": 0, "singular": 0, "imbalance": 0.0},
+        }
+    grouped = blocks[:cutoff].reshape(-1, 4)
     regular = 0
     singular = 0
     for block in grouped:

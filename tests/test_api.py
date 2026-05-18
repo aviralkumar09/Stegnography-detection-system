@@ -18,7 +18,7 @@ def test_auth_upload_detect_report_flow(tmp_path):
     from app.database import init_db
 
     init_db()
-    reg = client.post("/api/auth/register", json={"username": "tester1", "password": "password123"})
+    reg = client.post("/api/auth/register", json={"username": "tester1", "password": "Str0ngPass!2026"})
     assert reg.status_code == 200
     token = reg.json()["token"]
     image_path = tmp_path / "sample.png"

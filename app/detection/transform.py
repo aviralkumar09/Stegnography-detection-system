@@ -14,8 +14,8 @@ def _haar_energy(gray: np.ndarray) -> float:
 
 def transform_analysis(frame: np.ndarray) -> dict:
     gray = frame.mean(axis=2).astype(np.float32)
-    dct_like = np.abs(np.fft.fft2(gray))
-    high_freq_energy = float(np.mean(dct_like[dct_like.shape[0] // 2 :, dct_like.shape[1] // 2 :]))
+    fft_result = np.abs(np.fft.fft2(gray))
+    high_freq_energy = float(np.mean(fft_result[fft_result.shape[0] // 2 :, fft_result.shape[1] // 2 :]))
     wavelet_energy = _haar_energy(gray)
     score = min(1.0, (high_freq_energy / 1000.0 + wavelet_energy / 30.0) / 2)
     return {

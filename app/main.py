@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import create_token, hash_password, verify_password
+from .config import settings
 from .database import get_conn, init_db, utc_now
 from .dependencies import get_current_user
 from .detection.decision import evaluate_decision
@@ -147,8 +148,12 @@ def list_reports(user: dict = Depends(get_current_user)):
 @app.get("/api/reports/{report_id}/download")
 def download_report(report_id: int, user: dict = Depends(get_current_user)):
     report = get_report(report_id, user)
-    path = Path(f"reports/report_{report_id}.json")
-    path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    path = settings.report_dir / f"report_{report_id}.json"
+    path = path.resolve()
+    if path.parent != settings.report_dir.resolve():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid report path")
+    if not path.exists():
+        path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     return FileResponse(path)
 
 
